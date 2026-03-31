@@ -21,16 +21,33 @@ export async function POST(req: NextRequest) {
   const authToken = process.env.TWILIO_AUTH_TOKEN
   const from = process.env.TWILIO_PHONE_NUMBER
 
-  if (accountSid && authToken && from) {
-    const credentials = Buffer.from(accountSid + ':' + authToken).toString('base64')
-    await fetch('https://api.twilio.com/2010-04-01/Accounts/' + accountSid + '/Messages.json', {
+  if (!accountSid || !authToken || !from) {
+    return NextResponse.json({ error: 'Twilio not configured' }, { status: 500 })
+  }
+
+  const credentials = Buffer.from(accountSid + ':' + authToken).toString('base64')
+
+  const twilioRes = await fetch(
+    'https://api.twilio.com/2010-04-01/Accounts/' + accountSid + '/Messages.json',
+    {
       method: 'POST',
       headers: {
         'Authorization': 'Basic ' + credentials,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({ To: phone, From: from, Body: message }),
-    })
+      body: new URLSearchParams({
+        To: phone.startsWith('+') ? phone : '+1' + phone,
+        From: from,
+        Body: message,
+      }),
+    }
+  )
+
+  const twilioData = await twilioRes.json()
+
+  if (!twilioRes.ok) {
+    console.error('Twilio error:', twilioData)
+    return NextResponse.json({ error: twilioData.message }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

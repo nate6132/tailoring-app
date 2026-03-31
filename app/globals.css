@@ -3,9 +3,30 @@
 * {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
 }
 
 body {
   background-color: #f8f9fb;
   color: #111827;
+  overscroll-behavior: none;
+}
+
+input, select, textarea, button {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
 }

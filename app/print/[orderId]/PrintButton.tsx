@@ -4,9 +4,9 @@ export default function PrintButton() {
   return (
     <button
       onClick={() => window.print()}
-      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+      className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition"
     >
-      Print Tickets
+      Print all tickets
     </button>
   )
 }

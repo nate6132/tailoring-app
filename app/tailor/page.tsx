@@ -2,17 +2,20 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
-import type { Order, OrderItem } from '@/types'
+import type { Order, OrderItem, JobAssignment } from '@/types'
 
-type JobItem = OrderItem & {
-  orders: Order
-  job_assignments?: { id: string; tailor_id: string; claimed_at: string }[]
+type EnrichedItem = OrderItem & {
+  job_assignments?: JobAssignment | JobAssignment[] | null
+}
+
+type EnrichedOrder = Order & {
+  order_items?: EnrichedItem[]
 }
 
 export default function TailorPage() {
   const [view, setView] = useState<'board' | 'myjobs'>('board')
-  const [jobs, setJobs] = useState<JobItem[]>([])
-  const [myJobs, setMyJobs] = useState<JobItem[]>([])
+  const [orders, setOrders] = useState<EnrichedOrder[]>([])
+  const [myOrders, setMyOrders] = useState<EnrichedOrder[]>([])
   const [tailorId, setTailorId] = useState('')
   const [tailorName, setTailorName] = useState('')
   const [ready, setReady] = useState(false)
@@ -31,71 +34,90 @@ export default function TailorPage() {
     getMe()
   }, [])
 
-  const loadJobs = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('order_items')
-      .select('*, orders(*), job_assignments(*)')
-      .eq('status', 'pending')
-      .order('created_at')
-    if (error) console.error('loadJobs error:', error)
-    setJobs((data || []).filter((item: JobItem) => !item.job_assignments?.length))
+  const loadBoard = useCallback(async () => {
+    const res = await fetch('/api/orders')
+    const data: EnrichedOrder[] = await res.json()
+    const unclaimed = data.filter(order =>
+      (order.order_items || []).some(i =>
+        i.status === 'pending' && !i.job_assignments
+      )
+    )
+    setOrders(unclaimed)
     setLoading(false)
-  }, [supabase])
+  }, [])
 
-  const loadMyJobs = useCallback(async (id: string) => {
+  const loadMyOrders = useCallback(async (id: string) => {
     if (!id) return
-    const { data, error } = await supabase
-      .from('job_assignments')
-      .select('*, order_items(*, orders(*))')
-      .eq('tailor_id', id)
-      .is('completed_at', null)
-    if (error) console.error('loadMyJobs error:', error)
-    setMyJobs((data || []).map((a: { order_items: JobItem }) => a.order_items))
-  }, [supabase])
+    const res = await fetch('/api/orders')
+    const data: EnrichedOrder[] = await res.json()
+    const mine = data.filter(order =>
+      (order.order_items || []).some(i => {
+        const ja = i.job_assignments
+        if (!ja) return false
+        if (Array.isArray(ja)) return ja.some(a => a.tailor_id === id && !a.completed_at)
+        return ja.tailor_id === id && !ja.completed_at
+      })
+    )
+    setMyOrders(mine)
+  }, [])
 
   useEffect(() => {
     if (!ready) return
-    loadJobs()
-    if (tailorId) loadMyJobs(tailorId)
-    const channel = supabase
-      .channel('job-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_assignments' }, () => { loadJobs(); loadMyJobs(tailorId) })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => { loadJobs(); loadMyJobs(tailorId) })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [ready, tailorId, loadJobs, loadMyJobs, supabase])
+    loadBoard()
+    if (tailorId) loadMyOrders(tailorId)
+    const interval = setInterval(() => {
+      loadBoard()
+      if (tailorId) loadMyOrders(tailorId)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [ready, tailorId, loadBoard, loadMyOrders])
 
-  async function claimJob(itemId: string) {
+  async function claimOrder(order: EnrichedOrder) {
     if (!tailorId) return
-    await supabase.from('job_assignments').insert({ tailor_id: tailorId, order_item_id: itemId })
-    await supabase.from('order_items').update({ status: 'in_progress' }).eq('id', itemId)
-    loadJobs()
-    loadMyJobs(tailorId)
+    const pendingItems = (order.order_items || []).filter(i => i.status === 'pending')
+    for (const item of pendingItems) {
+      await supabase.from('job_assignments').insert({ tailor_id: tailorId, order_item_id: item.id })
+      await supabase.from('order_items').update({ status: 'in_progress' }).eq('id', item.id)
+    }
+    loadBoard()
+    loadMyOrders(tailorId)
     setView('myjobs')
   }
 
   async function claimByBarcode(e: React.FormEvent) {
     e.preventDefault()
-    const { data: item } = await supabase
-      .from('order_items')
-      .select('*')
-      .eq('barcode_id', barcodeInput.trim())
-      .single()
-    if (!item) return
-    await claimJob(item.id)
+    const res = await fetch('/api/orders')
+    const data: EnrichedOrder[] = await res.json()
+    const order = data.find(o =>
+      (o.order_items || []).some(i => i.barcode_id === barcodeInput.trim())
+    )
+    if (!order) return
+    await claimOrder(order)
     setBarcodeInput('')
   }
 
-  async function markDone(itemId: string) {
-    await supabase.from('order_items').update({ status: 'done', completed_at: new Date().toISOString() }).eq('id', itemId)
-    await supabase.from('job_assignments').update({ completed_at: new Date().toISOString() }).eq('order_item_id', itemId)
-    loadMyJobs(tailorId)
-    loadJobs()
+  async function markOrderDone(order: EnrichedOrder) {
+    const myItems = (order.order_items || []).filter(i => {
+      const ja = i.job_assignments
+      if (!ja) return false
+      if (Array.isArray(ja)) return ja.some(a => a.tailor_id === tailorId)
+      return ja.tailor_id === tailorId
+    })
+    for (const item of myItems) {
+      await supabase.from('order_items').update({ status: 'done', completed_at: new Date().toISOString() }).eq('id', item.id)
+      await supabase.from('job_assignments').update({ completed_at: new Date().toISOString() }).eq('order_item_id', item.id)
+    }
+    loadMyOrders(tailorId)
+    loadBoard()
   }
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' })
     window.location.href = '/login/pin'
+  }
+
+  function getItemCount(order: EnrichedOrder) {
+    return (order.order_items || []).filter(i => i.status === 'pending' || i.status === 'in_progress').length
   }
 
   if (!ready) {
@@ -134,30 +156,26 @@ export default function TailorPage() {
           <button
             onClick={() => setView('board')}
             className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${
-              view === 'board'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+              view === 'board' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             Job board
-            {jobs.length > 0 && (
+            {orders.length > 0 && (
               <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${view === 'board' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600'}`}>
-                {jobs.length}
+                {orders.length}
               </span>
             )}
           </button>
           <button
             onClick={() => setView('myjobs')}
             className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${
-              view === 'myjobs'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+              view === 'myjobs' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             My jobs
-            {myJobs.length > 0 && (
+            {myOrders.length > 0 && (
               <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${view === 'myjobs' ? 'bg-white/20 text-white' : 'bg-green-100 text-green-600'}`}>
-                {myJobs.length}
+                {myOrders.length}
               </span>
             )}
           </button>
@@ -170,7 +188,7 @@ export default function TailorPage() {
                 type="text"
                 value={barcodeInput}
                 onChange={e => setBarcodeInput(e.target.value)}
-                placeholder="Scan barcode to claim..."
+                placeholder="Scan barcode to claim order..."
                 className="flex-1 bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
               />
               <button
@@ -184,7 +202,7 @@ export default function TailorPage() {
 
             {loading ? (
               <div className="text-center text-gray-400 py-16 text-sm">Loading...</div>
-            ) : jobs.length === 0 ? (
+            ) : orders.length === 0 ? (
               <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
                 <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -196,21 +214,31 @@ export default function TailorPage() {
                 <p className="text-xs text-gray-400 mt-1">Check back soon</p>
               </div>
             ) : (
-              jobs.map(job => (
-                <div key={job.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
+              orders.map(order => (
+                <div key={order.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 text-sm leading-snug">{job.alteration_type}</p>
-                      <p className="text-sm text-gray-500 mt-0.5">{job.orders?.customer_name}</p>
+                      <p className="font-semibold text-gray-900 text-sm">{order.customer_name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{order.shopify_order_number ?? 'Manual order'}</p>
+                      <div className="mt-2 space-y-1">
+                        {(order.order_items || []).filter(i => i.status === 'pending').map(item => (
+                          <div key={item.id} className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
+                            <p className="text-xs text-gray-600">{item.alteration_type}</p>
+                          </div>
+                        ))}
+                      </div>
                       <div className="flex items-center gap-2 mt-2">
                         <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
-                          Due {new Date(job.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {getItemCount(order)} item{getItemCount(order) !== 1 ? 's' : ''}
                         </span>
-                        <span className="text-xs text-gray-300 font-mono">{job.barcode_id}</span>
+                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
+                          Due {new Date((order.order_items || [])[0]?.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
                       </div>
                     </div>
                     <button
-                      onClick={() => claimJob(job.id)}
+                      onClick={() => claimOrder(order)}
                       className="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-blue-700 active:scale-95 transition flex-shrink-0"
                     >
                       Claim
@@ -224,7 +252,7 @@ export default function TailorPage() {
 
         {view === 'myjobs' && (
           <div className="space-y-3">
-            {myJobs.length === 0 ? (
+            {myOrders.length === 0 ? (
               <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
                 <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -236,27 +264,53 @@ export default function TailorPage() {
                 <p className="text-xs text-gray-400 mt-1">Claim a job from the board</p>
               </div>
             ) : (
-              myJobs.map(job => (
-                <div key={job.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 text-sm leading-snug">{job.alteration_type}</p>
-                      <p className="text-sm text-gray-500 mt-0.5">{job.orders?.customer_name}</p>
-                      <div className="mt-2">
-                        <span className="text-xs bg-yellow-50 text-yellow-600 border border-yellow-100 px-2 py-0.5 rounded-lg">
-                          Due {new Date(job.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
+              myOrders.map(order => {
+                const myItems = (order.order_items || []).filter(i => {
+                  const ja = i.job_assignments
+                  if (!ja) return false
+                  if (Array.isArray(ja)) return ja.some(a => a.tailor_id === tailorId)
+                  return ja.tailor_id === tailorId
+                })
+                const allDone = myItems.every(i => i.status === 'done')
+                return (
+                  <div key={order.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm">{order.customer_name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{order.shopify_order_number ?? 'Manual order'}</p>
+                        <div className="mt-2 space-y-1">
+                          {myItems.map(item => (
+                            <div key={item.id} className="flex items-center gap-2">
+                              <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.status === 'done' ? 'bg-green-500' : 'bg-yellow-400'}`} />
+                              <p className={`text-xs ${item.status === 'done' ? 'line-through text-gray-400' : 'text-gray-600'}`}>
+                                {item.alteration_type}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-2">
+                          <span className="text-xs bg-yellow-50 text-yellow-600 border border-yellow-100 px-2 py-0.5 rounded-lg">
+                            Due {new Date(myItems[0]?.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
                       </div>
+                      {!allDone && (
+                        <button
+                          onClick={() => markOrderDone(order)}
+                          className="bg-green-500 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-green-600 active:scale-95 transition flex-shrink-0"
+                        >
+                          All done
+                        </button>
+                      )}
+                      {allDone && (
+                        <span className="text-xs bg-green-50 text-green-600 border border-green-100 px-3 py-2 rounded-xl flex-shrink-0 font-medium">
+                          Complete
+                        </span>
+                      )}
                     </div>
-                    <button
-                      onClick={() => markDone(job.id)}
-                      className="bg-green-500 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-green-600 active:scale-95 transition flex-shrink-0"
-                    >
-                      Done
-                    </button>
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         )}
