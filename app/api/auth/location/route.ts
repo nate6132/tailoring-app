@@ -6,17 +6,27 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const password = body.password
 
+    console.log('Location login attempt with password:', password)
+
     if (!password) {
       return NextResponse.json({ error: 'Password required' }, { status: 400 })
     }
 
     const supabase = createServerClient()
 
-    const { data: locations } = await supabase
+    const { data: locations, error } = await supabase
       .from('locations')
       .select('*')
 
+    console.log('Locations:', locations, 'Error:', error)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
     const location = locations?.find(l => l.password_hash === password)
+
+    console.log('Matched location:', location)
 
     if (!location) {
       return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
