@@ -23,6 +23,7 @@ export type JobAssignment = {
   order_item_id: string
   claimed_at: string
   completed_at: string | null
+  tailors?: { name: string } | null
 }
 
 export type OrderItem = {
@@ -34,7 +35,7 @@ export type OrderItem = {
   due_date: string
   completed_at: string | null
   created_at: string
-  job_assignments?: JobAssignment[]
+  job_assignments?: JobAssignment | JobAssignment[] | null
 }
 
 export type Order = {
