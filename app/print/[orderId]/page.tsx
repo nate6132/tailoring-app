@@ -27,7 +27,9 @@ export default async function PrintPage({ params }: { params: Promise<{ orderId:
     <div>
       <div className="no-print bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-base font-semibold text-gray-900">Print ticket</h1>
+          <h1 className="text-base font-semibold text-gray-900">
+            Print ticket {order.rush && <span className="text-red-500 ml-1">⚡ RUSH</span>}
+          </h1>
           <p className="text-sm text-gray-400">
             {order.customer_name} · {order.shopify_order_number ?? 'Manual'} · {items.length} items
           </p>
@@ -40,6 +42,7 @@ export default async function PrintPage({ params }: { params: Promise<{ orderId:
           customer_name: order.customer_name,
           customer_phone: order.customer_phone,
           shopify_order_number: order.shopify_order_number,
+          rush: order.rush || false,
         }}
         items={items}
         trackingUrl={trackingUrl}

@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import Image from 'next/image'
 
 export default async function Home() {
   const cookieStore = await cookies()
@@ -10,37 +9,39 @@ export default async function Home() {
   if (role === 'tailor') redirect('/tailor')
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16">
-        <div className="mb-16">
-          <Image
-            src="/atica-logo.png"
-            alt="Atica New York"
-            width={320}
-            height={120}
-            className="brightness-0 invert opacity-90"
-            priority
-          />
+    <div className="min-h-screen bg-[#0d0d14] flex flex-col relative overflow-hidden">
+      <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-20">
+        <div className="mb-16 text-center">
+          <div className="flex flex-col items-center select-none">
+            <span className="font-display tracking-[0.25em] font-semibold leading-none text-5xl text-white">
+              ATICA
+            </span>
+            <span className="tracking-[0.4em] font-light mt-1 text-xs text-white/40">
+              TAILORING
+            </span>
+          </div>
+          <div className="mt-6 w-16 h-px bg-white/10 mx-auto" />
+          <p className="mt-4 text-white/25 text-[10px] tracking-[0.3em] uppercase">New York</p>
         </div>
 
-        <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+        <div className="flex flex-col items-center gap-3 w-full max-w-[260px]">
           <Link
             href="/track"
-            className="w-full text-center bg-white text-[#0a0a0f] py-4 rounded-2xl text-sm font-semibold tracking-wide hover:bg-gray-100 transition-all duration-200"
+            className="w-full text-center bg-white text-[#0d0d14] py-4 rounded-xl text-xs font-semibold tracking-[0.15em] uppercase hover:bg-gray-100 transition-all duration-300"
           >
             Track My Order
           </Link>
           <Link
             href="/login"
-            className="w-full text-center bg-transparent border border-white/20 text-white/70 py-4 rounded-2xl text-sm font-medium tracking-wide hover:border-white/40 hover:text-white transition-all duration-200"
+            className="w-full text-center border border-white/15 text-white/50 py-4 rounded-xl text-xs font-medium tracking-[0.15em] uppercase hover:border-white/30 hover:text-white/80 transition-all duration-300"
           >
             Staff Login
           </Link>
         </div>
       </div>
 
-      <div className="text-center pb-8">
-        <p className="text-white/20 text-xs tracking-widest uppercase">New York</p>
+      <div className="relative text-center pb-8">
+        <p className="text-white/10 text-[10px] tracking-[0.4em] uppercase">Est. New York</p>
       </div>
     </div>
   )

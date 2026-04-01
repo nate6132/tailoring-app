@@ -15,6 +15,7 @@ type Props = {
     customer_name: string
     customer_phone: string
     shopify_order_number: string | null
+    rush?: boolean
   }
   items: Item[]
   trackingUrl: string
@@ -25,21 +26,28 @@ export default function TicketClient({ order, items, trackingUrl }: Props) {
     return item.due_date < earliest ? item.due_date : earliest
   }, items[0]?.due_date ?? '')
 
-  const barcodeValue = order.shopify_order_number ?? items[0]?.barcode_id ?? 'ORDER'
+  const barcodeValue = order.shopify_order_number || items[0]?.barcode_id || 'ORDER'
 
   return (
-    <div className="ticket-page">
+    <div className="ticket-wrapper">
       <div className="ticket">
-        <div className="ticket-header">
-          <div className="ticket-name">{order.customer_name}</div>
-          <div className="ticket-order">{order.shopify_order_number ?? 'Manual'}</div>
-        </div>
+        {order.rush && (
+          <div className="rush-banner">
+            ⚡ RUSH ORDER
+          </div>
+        )}
 
-        <div className="ticket-phone">{order.customer_phone}</div>
+        <div className="ticket-header">
+          <div>
+            <div className="ticket-order">{order.shopify_order_number ?? 'Manual'}</div>
+            <div className="ticket-name">{order.customer_name}</div>
+            <div className="ticket-phone">{order.customer_phone}</div>
+          </div>
+        </div>
 
         <div className="ticket-divider" />
 
-        <div className="ticket-label">Alterations</div>
+        <div className="ticket-section-label">Alterations</div>
         <div className="ticket-items">
           {items.map((item, idx) => (
             <div key={item.id} className="ticket-item">
@@ -48,108 +56,143 @@ export default function TicketClient({ order, items, trackingUrl }: Props) {
           ))}
         </div>
 
-        <div className="ticket-due">
-          Due: {new Date(earliestDue).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        <div className="ticket-divider" />
+
+        <div className="ticket-due-row">
+          <div>
+            <div className="ticket-section-label">Due by</div>
+            <div className={order.rush ? 'ticket-due-rush' : 'ticket-due'}>
+              {new Date(earliestDue).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+            </div>
+          </div>
         </div>
 
         <div className="ticket-divider" />
 
+        <div className="ticket-section-label">Barcode</div>
         <div className="ticket-barcode">
           <Barcode
             value={barcodeValue}
             format="CODE128"
-            width={2}
-            height={60}
+            width={1.8}
+            height={55}
             displayValue={true}
-            fontSize={12}
+            fontSize={11}
             margin={0}
             background="#ffffff"
             lineColor="#000000"
           />
         </div>
 
+        <div className="ticket-divider" />
+
         <div className="ticket-qr-row">
-          <QRCode value={trackingUrl} size={60} />
-          <div className="ticket-qr-text">Scan to track order</div>
+          <QRCode value={trackingUrl} size={65} />
+          <div className="ticket-qr-text">
+            <div className="ticket-section-label">Track your order</div>
+            <div className="ticket-url">{trackingUrl}</div>
+          </div>
         </div>
       </div>
 
       <style>{`
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        body {
-          background: white;
-        }
-
-        .ticket-page {
+        .ticket-wrapper {
           width: 4in;
-          padding: 0.15in;
-          font-family: Arial, sans-serif;
+          padding: 0.12in;
+          font-family: Arial, Helvetica, sans-serif;
+          background: white;
         }
 
         .ticket {
           width: 100%;
         }
 
-        .ticket-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 4px;
+        .rush-banner {
+          background: #000;
+          color: #fff;
+          font-size: 16px;
+          font-weight: 900;
+          text-align: center;
+          padding: 6px 0;
+          letter-spacing: 0.1em;
+          margin-bottom: 10px;
+          border-radius: 4px;
         }
 
-        .ticket-name {
-          font-size: 18px;
-          font-weight: bold;
-          color: #000;
+        .ticket-header {
+          margin-bottom: 8px;
         }
 
         .ticket-order {
-          font-size: 13px;
-          color: #555;
+          font-size: 11px;
+          color: #888;
           font-weight: 600;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          margin-bottom: 2px;
+        }
+
+        .ticket-name {
+          font-size: 20px;
+          font-weight: 700;
+          color: #000;
+          line-height: 1.1;
         }
 
         .ticket-phone {
           font-size: 12px;
           color: #555;
-          margin-bottom: 8px;
+          margin-top: 2px;
         }
 
         .ticket-divider {
           border-top: 1px dashed #ccc;
-          margin: 6px 0;
+          margin: 8px 0;
         }
 
-        .ticket-label {
-          font-size: 9px;
+        .ticket-section-label {
+          font-size: 8px;
           text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: #888;
-          margin-bottom: 3px;
+          letter-spacing: 0.1em;
+          color: #999;
+          margin-bottom: 4px;
+          font-weight: 600;
         }
 
         .ticket-items {
-          margin-bottom: 6px;
+          margin-bottom: 2px;
         }
 
         .ticket-item {
           font-size: 13px;
           font-weight: 600;
           color: #000;
-          line-height: 1.4;
+          line-height: 1.5;
+        }
+
+        .ticket-due-row {
+          margin-bottom: 2px;
         }
 
         .ticket-due {
-          font-size: 12px;
-          color: #333;
-          margin-bottom: 6px;
+          font-size: 14px;
+          font-weight: 700;
+          color: #000;
+        }
+
+        .ticket-due-rush {
+          font-size: 16px;
+          font-weight: 900;
+          color: #000;
+          text-decoration: underline;
         }
 
         .ticket-barcode {
           display: flex;
           justify-content: center;
-          margin-bottom: 8px;
+          margin-bottom: 2px;
         }
 
         .ticket-barcode svg {
@@ -160,11 +203,18 @@ export default function TicketClient({ order, items, trackingUrl }: Props) {
           display: flex;
           align-items: center;
           gap: 10px;
+          margin-top: 2px;
         }
 
         .ticket-qr-text {
-          font-size: 11px;
-          color: #555;
+          flex: 1;
+        }
+
+        .ticket-url {
+          font-size: 8px;
+          color: #888;
+          word-break: break-all;
+          margin-top: 2px;
         }
 
         @media print {
@@ -172,20 +222,9 @@ export default function TicketClient({ order, items, trackingUrl }: Props) {
             size: 4in 6in;
             margin: 0;
           }
-
-          body {
-            margin: 0;
-            padding: 0;
-          }
-
-          .no-print {
-            display: none !important;
-          }
-
-          .ticket-page {
-            width: 4in;
-            padding: 0.15in;
-          }
+          body { margin: 0; padding: 0; background: white; }
+          .no-print { display: none !important; }
+          .ticket-wrapper { width: 4in; padding: 0.12in; }
         }
       `}</style>
     </div>

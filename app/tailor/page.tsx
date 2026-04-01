@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Order, OrderItem, JobAssignment } from '@/types'
+import AticaLogo from '@/components/AticaLogo'
 
 type EnrichedItem = OrderItem & {
   job_assignments?: JobAssignment | JobAssignment[] | null
@@ -38,9 +39,7 @@ export default function TailorPage() {
     const res = await fetch('/api/orders')
     const data: EnrichedOrder[] = await res.json()
     const unclaimed = data.filter(order =>
-      (order.order_items || []).some(i =>
-        i.status === 'pending' && !i.job_assignments
-      )
+      (order.order_items || []).some(i => i.status === 'pending' && !i.job_assignments)
     )
     setOrders(unclaimed)
     setLoading(false)
@@ -116,10 +115,6 @@ export default function TailorPage() {
     window.location.href = '/login/pin'
   }
 
-  function getItemCount(order: EnrichedOrder) {
-    return (order.order_items || []).filter(i => i.status === 'pending' || i.status === 'in_progress').length
-  }
-
   if (!ready) {
     return (
       <div className="min-h-screen bg-[#f8f9fb] flex items-center justify-center">
@@ -129,19 +124,12 @@ export default function TailorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fb]">
-      <div className="bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-[#f8f9fb] flex flex-col">
+      <div className="bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M4.5 6.75h9M4.5 9h6M4.5 11.25h7.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              <rect x="2" y="3" width="14" height="12" rx="2.5" stroke="white" strokeWidth="1.5"/>
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900 leading-tight">Tailor Manager</p>
-            <p className="text-xs text-gray-400 leading-tight">{tailorName || 'Tailor'}</p>
-          </div>
+          <AticaLogo size="sm" />
+          <div className="w-px h-6 bg-gray-100" />
+          <p className="text-sm text-gray-500">{tailorName || 'Tailor'}</p>
         </div>
         <button
           onClick={logout}
@@ -151,169 +139,162 @@ export default function TailorPage() {
         </button>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 pt-5 pb-10">
-        <div className="flex bg-white border border-gray-100 rounded-2xl p-1 mb-5 shadow-sm">
-          <button
-            onClick={() => setView('board')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${
-              view === 'board' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Job board
-            {orders.length > 0 && (
-              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${view === 'board' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600'}`}>
-                {orders.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setView('myjobs')}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${
-              view === 'myjobs' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            My jobs
-            {myOrders.length > 0 && (
-              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${view === 'myjobs' ? 'bg-white/20 text-white' : 'bg-green-100 text-green-600'}`}>
-                {myOrders.length}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {view === 'board' && (
-          <div className="space-y-3">
-            <form onSubmit={claimByBarcode} className="flex gap-2">
-              <input
-                type="text"
-                value={barcodeInput}
-                onChange={e => setBarcodeInput(e.target.value)}
-                placeholder="Scan barcode to claim order..."
-                className="flex-1 bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-              />
-              <button
-                type="submit"
-                disabled={!barcodeInput}
-                className="bg-blue-600 text-white px-5 py-3 rounded-2xl text-sm font-medium hover:bg-blue-700 disabled:opacity-40 transition shadow-sm"
-              >
-                Claim
-              </button>
-            </form>
-
-            {loading ? (
-              <div className="text-center text-gray-400 py-16 text-sm">Loading...</div>
-            ) : orders.length === 0 ? (
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                    <path d="M11 7v4l2.5 2.5" stroke="#9CA3AF" strokeWidth="1.75" strokeLinecap="round"/>
-                    <circle cx="11" cy="11" r="8" stroke="#9CA3AF" strokeWidth="1.75"/>
-                  </svg>
-                </div>
-                <p className="text-sm font-medium text-gray-500">No open jobs</p>
-                <p className="text-xs text-gray-400 mt-1">Check back soon</p>
-              </div>
-            ) : (
-              orders.map(order => (
-                <div key={order.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 text-sm">{order.customer_name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{order.shopify_order_number ?? 'Manual order'}</p>
-                      <div className="mt-2 space-y-1">
-                        {(order.order_items || []).filter(i => i.status === 'pending').map(item => (
-                          <div key={item.id} className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
-                            <p className="text-xs text-gray-600">{item.alteration_type}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
-                          {getItemCount(order)} item{getItemCount(order) !== 1 ? 's' : ''}
-                        </span>
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
-                          Due {new Date((order.order_items || [])[0]?.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => claimOrder(order)}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-blue-700 active:scale-95 transition flex-shrink-0"
-                    >
-                      Claim
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-2xl mx-auto px-4 pt-5 pb-10">
+          <div className="flex bg-white border border-gray-100 rounded-2xl p-1 mb-5 shadow-sm">
+            <button
+              onClick={() => setView('board')}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${
+                view === 'board' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Job board
+              {orders.length > 0 && (
+                <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${view === 'board' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                  {orders.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setView('myjobs')}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${
+                view === 'myjobs' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              My jobs
+              {myOrders.length > 0 && (
+                <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${view === 'myjobs' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                  {myOrders.length}
+                </span>
+              )}
+            </button>
           </div>
-        )}
 
-        {view === 'myjobs' && (
-          <div className="space-y-3">
-            {myOrders.length === 0 ? (
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                    <path d="M7 11l3 3 5-5" stroke="#9CA3AF" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="11" cy="11" r="8" stroke="#9CA3AF" strokeWidth="1.75"/>
-                  </svg>
+          {view === 'board' && (
+            <div className="space-y-3">
+              <form onSubmit={claimByBarcode} className="flex gap-2">
+                <input
+                  type="text"
+                  value={barcodeInput}
+                  onChange={e => setBarcodeInput(e.target.value)}
+                  placeholder="Scan barcode to claim..."
+                  className="flex-1 bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 shadow-sm"
+                />
+                <button
+                  type="submit"
+                  disabled={!barcodeInput}
+                  className="bg-gray-900 text-white px-5 py-3 rounded-2xl text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition shadow-sm"
+                >
+                  Claim
+                </button>
+              </form>
+
+              {loading ? (
+                <div className="text-center text-gray-400 py-16 text-sm">Loading...</div>
+              ) : orders.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
+                  <p className="text-sm font-medium text-gray-400">No open jobs</p>
+                  <p className="text-xs text-gray-300 mt-1">Check back soon</p>
                 </div>
-                <p className="text-sm font-medium text-gray-500">No claimed jobs</p>
-                <p className="text-xs text-gray-400 mt-1">Claim a job from the board</p>
-              </div>
-            ) : (
-              myOrders.map(order => {
-                const myItems = (order.order_items || []).filter(i => {
-                  const ja = i.job_assignments
-                  if (!ja) return false
-                  if (Array.isArray(ja)) return ja.some(a => a.tailor_id === tailorId)
-                  return ja.tailor_id === tailorId
-                })
-                const allDone = myItems.every(i => i.status === 'done')
-                return (
+              ) : (
+                orders.map(order => (
                   <div key={order.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 text-sm">{order.customer_name}</p>
                         <p className="text-xs text-gray-400 mt-0.5">{order.shopify_order_number ?? 'Manual order'}</p>
                         <div className="mt-2 space-y-1">
-                          {myItems.map(item => (
+                          {(order.order_items || []).filter(i => i.status === 'pending').map(item => (
                             <div key={item.id} className="flex items-center gap-2">
-                              <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.status === 'done' ? 'bg-green-500' : 'bg-yellow-400'}`} />
-                              <p className={`text-xs ${item.status === 'done' ? 'line-through text-gray-400' : 'text-gray-600'}`}>
-                                {item.alteration_type}
-                              </p>
+                              <div className="w-1 h-1 rounded-full bg-gray-300 flex-shrink-0" />
+                              <p className="text-xs text-gray-500">{item.alteration_type}</p>
                             </div>
                           ))}
                         </div>
-                        <div className="mt-2">
-                          <span className="text-xs bg-yellow-50 text-yellow-600 border border-yellow-100 px-2 py-0.5 rounded-lg">
-                            Due {new Date(myItems[0]?.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
+                            {(order.order_items || []).filter(i => i.status === 'pending').length} items
                           </span>
+                          {(order.order_items || [])[0]?.due_date && (
+                            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
+                              Due {new Date((order.order_items || [])[0].due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
                         </div>
                       </div>
-                      {!allDone && (
-                        <button
-                          onClick={() => markOrderDone(order)}
-                          className="bg-green-500 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-green-600 active:scale-95 transition flex-shrink-0"
-                        >
-                          All done
-                        </button>
-                      )}
-                      {allDone && (
-                        <span className="text-xs bg-green-50 text-green-600 border border-green-100 px-3 py-2 rounded-xl flex-shrink-0 font-medium">
-                          Complete
-                        </span>
-                      )}
+                      <button
+                        onClick={() => claimOrder(order)}
+                        className="bg-gray-900 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-gray-800 active:scale-95 transition flex-shrink-0"
+                      >
+                        Claim
+                      </button>
                     </div>
                   </div>
-                )
-              })
-            )}
-          </div>
-        )}
+                ))
+              )}
+            </div>
+          )}
+
+          {view === 'myjobs' && (
+            <div className="space-y-3">
+              {myOrders.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-10 text-center">
+                  <p className="text-sm font-medium text-gray-400">No claimed jobs</p>
+                  <p className="text-xs text-gray-300 mt-1">Claim a job from the board</p>
+                </div>
+              ) : (
+                myOrders.map(order => {
+                  const myItems = (order.order_items || []).filter(i => {
+                    const ja = i.job_assignments
+                    if (!ja) return false
+                    if (Array.isArray(ja)) return ja.some(a => a.tailor_id === tailorId)
+                    return ja.tailor_id === tailorId
+                  })
+                  const allDone = myItems.every(i => i.status === 'done')
+                  return (
+                    <div key={order.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm">{order.customer_name}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{order.shopify_order_number ?? 'Manual order'}</p>
+                          <div className="mt-2 space-y-1">
+                            {myItems.map(item => (
+                              <div key={item.id} className="flex items-center gap-2">
+                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.status === 'done' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                                <p className={`text-xs ${item.status === 'done' ? 'line-through text-gray-300' : 'text-gray-600'}`}>
+                                  {item.alteration_type}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                          {myItems[0]?.due_date && (
+                            <div className="mt-2.5">
+                              <span className="text-xs bg-amber-50 text-amber-600 border border-amber-100 px-2 py-0.5 rounded-lg">
+                                Due {new Date(myItems[0].due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {!allDone ? (
+                          <button
+                            onClick={() => markOrderDone(order)}
+                            className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-600 active:scale-95 transition flex-shrink-0"
+                          >
+                            All done
+                          </button>
+                        ) : (
+                          <span className="text-xs bg-emerald-50 text-emerald-600 border border-emerald-100 px-3 py-2 rounded-xl flex-shrink-0 font-medium">
+                            Complete
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
+import AticaLogo from '@/components/AticaLogo'
 
 export default function LoginPage() {
   const [password, setPassword] = useState('')
@@ -82,18 +82,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
-      <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
-        <Link href="/">
-          <Image
-            src="/atica-logo.png"
-            alt="Atica New York"
-            width={100}
-            height={38}
-            className="brightness-0 invert opacity-80"
-          />
-        </Link>
-        <Link href="/" className="text-white/40 text-sm hover:text-white/70 transition">
+    <div className="min-h-screen bg-[#0d0d14] flex flex-col">
+      <div className="border-b border-white/5 px-6 py-4 flex items-center justify-between">
+        <AticaLogo dark size="sm" />
+        <Link href="/" className="text-white/30 text-xs tracking-widest uppercase hover:text-white/60 transition">
           Back
         </Link>
       </div>
@@ -102,14 +94,13 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
 
           <div className="text-center mb-8">
-            <h1 className="text-xl font-semibold text-white">Staff login</h1>
-            <p className="text-white/30 text-sm mt-1">
-              {step === 'location' ? 'Enter your location password' : locationName}
+            <h1 className="font-display text-2xl text-white mb-1">Staff login</h1>
+            <p className="text-white/25 text-xs tracking-widest uppercase">
+              {step === 'location' ? 'Enter location password' : locationName}
             </p>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-3xl p-6">
-
+          <div className="bg-white/[0.03] border border-white/8 rounded-3xl p-6">
             {step === 'location' && (
               <form onSubmit={handleLocationSubmit} className="space-y-4">
                 <input
@@ -118,22 +109,22 @@ export default function LoginPage() {
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Location password"
                   autoFocus
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white text-sm placeholder-white/30 focus:outline-none focus:border-white/30 transition"
+                  className="w-full bg-white/5 border border-white/8 rounded-xl px-4 py-3.5 text-white text-sm placeholder-white/20 focus:outline-none focus:border-white/25 transition"
                 />
-                {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                {error && <p className="text-red-400/80 text-xs text-center">{error}</p>}
                 <button
                   type="submit"
                   disabled={loading || !password}
-                  className="w-full bg-white text-[#0a0a0f] py-3.5 rounded-2xl font-semibold text-sm hover:bg-gray-100 disabled:opacity-40 transition"
+                  className="w-full bg-white text-[#0d0d14] py-3.5 rounded-xl text-xs font-semibold tracking-wider uppercase hover:bg-gray-100 disabled:opacity-30 transition"
                 >
-                  {loading ? 'Verifying...' : 'Continue'}
+                  {loading ? '...' : 'Continue'}
                 </button>
               </form>
             )}
 
             {step === 'pin' && (
               <div>
-                <p className="text-xs font-medium text-white/40 uppercase tracking-widest text-center mb-6">
+                <p className="text-xs text-white/25 tracking-widest uppercase text-center mb-6">
                   Enter your PIN
                 </p>
 
@@ -141,37 +132,34 @@ export default function LoginPage() {
                   {[0, 1, 2, 3].map(i => (
                     <div
                       key={i}
-                      className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all ${
-                        pin.length > i
-                          ? 'border-white bg-white/10'
-                          : 'border-white/10 bg-white/5'
+                      className={`w-11 h-11 rounded-xl border flex items-center justify-center transition-all ${
+                        pin.length > i ? 'border-white/40 bg-white/10' : 'border-white/8 bg-white/3'
                       }`}
                     >
-                      {pin.length > i && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+                      {pin.length > i && <div className="w-2 h-2 rounded-full bg-white" />}
                     </div>
                   ))}
                 </div>
 
-                {error && <p className="text-red-400 text-sm text-center mb-4">{error}</p>}
+                {error && <p className="text-red-400/80 text-xs text-center mb-4">{error}</p>}
 
-                <div className="grid grid-cols-3 gap-2.5 mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-4">
                   {['1','2','3','4','5','6','7','8','9','','0','del'].map((key, idx) => (
                     <button
                       key={idx}
                       onClick={() => key && handlePinKey(key)}
                       disabled={loading}
-                      className={`h-14 rounded-2xl text-base font-medium transition-all select-none ${
-                        key === ''
-                          ? 'cursor-default pointer-events-none'
-                          : key === 'del'
-                          ? 'bg-white/5 text-white/50 hover:bg-white/10'
-                          : 'bg-white/5 border border-white/10 text-white hover:bg-white/10 active:scale-95'
+                      className={`h-13 rounded-xl text-sm font-medium transition-all select-none ${
+                        key === '' ? 'cursor-default pointer-events-none' :
+                        key === 'del' ? 'bg-white/3 text-white/30 hover:bg-white/8 hover:text-white/50' :
+                        'bg-white/5 border border-white/8 text-white/70 hover:bg-white/10 hover:text-white active:scale-95'
                       }`}
+                      style={{ height: '52px' }}
                     >
                       {key === 'del' ? (
                         <span className="flex items-center justify-center">
-                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                            <path d="M14 9H7M7 9L10 6M7 9L10 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M12 8H5M5 8L8 5M5 8L8 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         </span>
                       ) : key}
@@ -182,14 +170,14 @@ export default function LoginPage() {
                 <button
                   onClick={handlePinSubmit}
                   disabled={loading || pin.length < 4}
-                  className="w-full bg-white text-[#0a0a0f] py-3.5 rounded-2xl font-semibold text-sm hover:bg-gray-100 disabled:opacity-40 transition mb-3"
+                  className="w-full bg-white text-[#0d0d14] py-3.5 rounded-xl text-xs font-semibold tracking-wider uppercase hover:bg-gray-100 disabled:opacity-30 transition mb-3"
                 >
-                  {loading ? 'Signing in...' : 'Sign in'}
+                  {loading ? '...' : 'Sign in'}
                 </button>
 
                 <button
                   onClick={() => { setStep('location'); setPin(''); setError('') }}
-                  className="w-full text-center text-sm text-white/25 hover:text-white/50 transition py-1"
+                  className="w-full text-center text-xs text-white/20 hover:text-white/40 transition py-1 tracking-wider uppercase"
                 >
                   Switch location
                 </button>

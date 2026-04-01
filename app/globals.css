@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@fontsource/cormorant-garamond/400.css";
+@import "@fontsource/cormorant-garamond/600.css";
 
 * {
   -webkit-font-smoothing: antialiased;
@@ -17,6 +19,10 @@ body {
   overscroll-behavior: none;
 }
 
+.font-display {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
 input, select, textarea, button {
   font-family: inherit;
 }
@@ -29,4 +35,8 @@ button {
 ::-webkit-scrollbar {
   width: 0px;
   background: transparent;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }

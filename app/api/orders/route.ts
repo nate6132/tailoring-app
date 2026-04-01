@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
+import { getDefaultDueDate } from '@/lib/dates'
 
 async function sendSms(phone: string, message: string) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID
@@ -33,17 +34,26 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const supabase = createServerClient()
-  const { customer_name, customer_phone, shopify_order_number, items } = await req.json()
-
-  const locationId = req.cookies.get('location_id')?.value || null
+  const { customer_name, customer_phone, shopify_order_number, items, rush, due_date } = await req.json()
 
   if (!customer_name || !customer_phone || !items?.length) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
+  if (customer_phone.replace(/\D/g, '').length < 10) {
+    return NextResponse.json({ error: 'Phone number must be 10 digits' }, { status: 400 })
+  }
+
+  if (!shopify_order_number) {
+    return NextResponse.json({ error: 'Order number is required' }, { status: 400 })
+  }
+
+  const locationId = req.cookies.get('location_id')?.value || null
+  const dueDate = due_date || getDefaultDueDate()
+
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .insert({ customer_name, customer_phone, shopify_order_number, location_id: locationId })
+    .insert({ customer_name, customer_phone, shopify_order_number, location_id: locationId, rush: rush || false })
     .select()
     .single()
 
@@ -54,21 +64,17 @@ export async function POST(req: NextRequest) {
   const orderItems = items.map((alteration_type: string) => ({
     order_id: order.id,
     alteration_type,
-    barcode_id: shopify_order_number ?? 'BC-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
-    due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    barcode_id: shopify_order_number,
+    due_date: dueDate,
   }))
 
   const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
-
-  if (itemsError) {
-    return NextResponse.json({ error: 'Failed to create items' }, { status: 500 })
-  }
+  if (itemsError) return NextResponse.json({ error: 'Failed to create items' }, { status: 500 })
 
   const trackingUrl = process.env.NEXT_PUBLIC_APP_URL + '/track/' + order.tracking_token
-  const smsMessage = 'Hi ' + customer_name + ', your tailoring order ' + (shopify_order_number ?? '') + ' has been received! Track your order here: ' + trackingUrl
+  const smsMessage = 'Hi ' + customer_name + ', your tailoring order ' + shopify_order_number + ' has been received! Track here: ' + trackingUrl
 
   await sendSms(customer_phone, smsMessage)
-
   await supabase.from('notifications').insert({
     order_id: order.id,
     message: smsMessage,
