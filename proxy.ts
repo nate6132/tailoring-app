@@ -17,7 +17,7 @@ export function proxy(req: NextRequest) {
     }
   }
 
-  if (pathname.startsWith('/login') && role && locationId) {
+  if (pathname === '/login' && role && locationId) {
     if (role === 'admin') {
       return NextResponse.redirect(new URL('/admin', req.url))
     }
@@ -30,5 +30,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/tailor/:path*', '/login/:path*', '/login'],
+  matcher: ['/admin/:path*', '/tailor/:path*', '/login'],
 }

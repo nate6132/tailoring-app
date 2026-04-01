@@ -5,6 +5,7 @@ export type Location = {
   id: string
   name: string
   password_hash: string
+  printer_ip?: string | null
   created_at: string
 }
 

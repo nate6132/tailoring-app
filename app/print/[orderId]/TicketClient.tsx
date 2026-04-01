@@ -25,72 +25,169 @@ export default function TicketClient({ order, items, trackingUrl }: Props) {
     return item.due_date < earliest ? item.due_date : earliest
   }, items[0]?.due_date ?? '')
 
+  const barcodeValue = order.shopify_order_number ?? items[0]?.barcode_id ?? 'ORDER'
+
   return (
-    <div className="p-6 flex justify-center">
-      <div
-        className="ticket bg-white rounded-2xl shadow-sm border border-gray-200 p-5 w-80"
-        style={{ pageBreakInside: 'avoid' }}
-      >
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-              {order.shopify_order_number ?? 'Manual order'}
-            </p>
-            <p className="text-lg font-bold text-gray-900 mt-0.5">{order.customer_name}</p>
-            <p className="text-sm text-gray-500">{order.customer_phone}</p>
-          </div>
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M4 6h8M4 8h5M4 10h6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              <rect x="2" y="3" width="12" height="10" rx="2" stroke="white" strokeWidth="1.5"/>
-            </svg>
-          </div>
+    <div className="ticket-page">
+      <div className="ticket">
+        <div className="ticket-header">
+          <div className="ticket-name">{order.customer_name}</div>
+          <div className="ticket-order">{order.shopify_order_number ?? 'Manual'}</div>
         </div>
 
-        <div className="bg-gray-50 rounded-xl px-4 py-3 mb-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-2">Alterations</p>
-          <div className="space-y-1.5">
-            {items.map((item, idx) => (
-              <div key={item.id} className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 w-4 flex-shrink-0">{idx + 1}.</span>
-                <span className="text-sm font-medium text-gray-900">{item.alteration_type}</span>
-              </div>
-            ))}
-          </div>
+        <div className="ticket-phone">{order.customer_phone}</div>
+
+        <div className="ticket-divider" />
+
+        <div className="ticket-label">Alterations</div>
+        <div className="ticket-items">
+          {items.map((item, idx) => (
+            <div key={item.id} className="ticket-item">
+              {idx + 1}. {item.alteration_type}
+            </div>
+          ))}
         </div>
 
-        <div className="mb-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Due by</p>
-          <p className="text-sm font-semibold text-gray-900">
-            {new Date(earliestDue).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </p>
+        <div className="ticket-due">
+          Due: {new Date(earliestDue).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </div>
 
-        <div className="border-t border-gray-100 pt-4 mb-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-2">Barcode</p>
-          <div className="flex justify-center">
-            <Barcode
-              value={order.shopify_order_number ?? items[0]?.barcode_id ?? 'ORDER'}
-              format="CODE128"
-              width={1.5}
-              height={50}
-              displayValue={true}
-              fontSize={11}
-              margin={0}
-              background="#ffffff"
-              lineColor="#111827"
-            />
-          </div>
+        <div className="ticket-divider" />
+
+        <div className="ticket-barcode">
+          <Barcode
+            value={barcodeValue}
+            format="CODE128"
+            width={2}
+            height={60}
+            displayValue={true}
+            fontSize={12}
+            margin={0}
+            background="#ffffff"
+            lineColor="#000000"
+          />
         </div>
 
-        <div className="border-t border-gray-100 pt-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-2">Scan to track order</p>
-          <div className="flex items-center gap-4">
-            <QRCode value={trackingUrl} size={72} />
-            <p className="text-xs text-gray-400 leading-relaxed">Customer can scan to track their order in real time.</p>
-          </div>
+        <div className="ticket-qr-row">
+          <QRCode value={trackingUrl} size={60} />
+          <div className="ticket-qr-text">Scan to track order</div>
         </div>
       </div>
+
+      <style>{`
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+          background: white;
+        }
+
+        .ticket-page {
+          width: 4in;
+          padding: 0.15in;
+          font-family: Arial, sans-serif;
+        }
+
+        .ticket {
+          width: 100%;
+        }
+
+        .ticket-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 4px;
+        }
+
+        .ticket-name {
+          font-size: 18px;
+          font-weight: bold;
+          color: #000;
+        }
+
+        .ticket-order {
+          font-size: 13px;
+          color: #555;
+          font-weight: 600;
+        }
+
+        .ticket-phone {
+          font-size: 12px;
+          color: #555;
+          margin-bottom: 8px;
+        }
+
+        .ticket-divider {
+          border-top: 1px dashed #ccc;
+          margin: 6px 0;
+        }
+
+        .ticket-label {
+          font-size: 9px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: #888;
+          margin-bottom: 3px;
+        }
+
+        .ticket-items {
+          margin-bottom: 6px;
+        }
+
+        .ticket-item {
+          font-size: 13px;
+          font-weight: 600;
+          color: #000;
+          line-height: 1.4;
+        }
+
+        .ticket-due {
+          font-size: 12px;
+          color: #333;
+          margin-bottom: 6px;
+        }
+
+        .ticket-barcode {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 8px;
+        }
+
+        .ticket-barcode svg {
+          max-width: 100%;
+        }
+
+        .ticket-qr-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .ticket-qr-text {
+          font-size: 11px;
+          color: #555;
+        }
+
+        @media print {
+          @page {
+            size: 4in 6in;
+            margin: 0;
+          }
+
+          body {
+            margin: 0;
+            padding: 0;
+          }
+
+          .no-print {
+            display: none !important;
+          }
+
+          .ticket-page {
+            width: 4in;
+            padding: 0.15in;
+          }
+        }
+      `}</style>
     </div>
   )
 }

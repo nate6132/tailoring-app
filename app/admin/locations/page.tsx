@@ -7,6 +7,8 @@ export default function LocationsPage() {
   const [locations, setLocations] = useState<Location[]>([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
+  const [editingIp, setEditingIp] = useState<string | null>(null)
+  const [ipValue, setIpValue] = useState('')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   const [saving, setSaving] = useState(false)
@@ -35,6 +37,16 @@ export default function LocationsPage() {
     load()
   }
 
+  async function saveIp(id: string) {
+    await fetch('/api/locations/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ printer_ip: ipValue }),
+    })
+    setEditingIp(null)
+    load()
+  }
+
   async function deleteLocation(id: string) {
     await fetch('/api/locations/' + id, { method: 'DELETE' })
     load()
@@ -53,7 +65,7 @@ export default function LocationsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Locations</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Manage store locations and passwords</p>
+          <p className="text-sm text-gray-400 mt-0.5">Manage store locations, passwords and printer IPs</p>
         </div>
         <button
           onClick={() => setShowAdd(true)}
@@ -63,19 +75,63 @@ export default function LocationsPage() {
         </button>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {locations.map(location => (
-          <div key={location.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-900">{location.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">Password: {location.password_hash}</p>
+          <div key={location.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{location.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Password: {location.password_hash}</p>
+              </div>
+              <button
+                onClick={() => deleteLocation(location.id)}
+                className="text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-xl hover:bg-red-100 transition flex-shrink-0"
+              >
+                Delete
+              </button>
             </div>
-            <button
-              onClick={() => deleteLocation(location.id)}
-              className="text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-xl hover:bg-red-100 transition"
-            >
-              Delete
-            </button>
+
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Printer IP address</p>
+              {editingIp === location.id ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={ipValue}
+                    onChange={e => setIpValue(e.target.value)}
+                    placeholder="e.g. 192.168.1.100"
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={() => saveIp(location.id)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingIp(null)}
+                    className="bg-gray-100 text-gray-600 px-4 py-2 rounded-xl text-sm hover:bg-gray-200 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${location.printer_ip ? 'bg-green-500' : 'bg-gray-300'}`} />
+                    <p className="text-sm text-gray-700 font-mono">
+                      {location.printer_ip || 'No printer IP set'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setEditingIp(location.id); setIpValue(location.printer_ip || '') }}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {location.printer_ip ? 'Change' : 'Set IP'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>

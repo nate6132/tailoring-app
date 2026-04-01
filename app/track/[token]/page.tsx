@@ -1,4 +1,6 @@
 import { createServerClient } from '@/lib/supabase-server'
+import Link from 'next/link'
+import Image from 'next/image'
 
 export default async function TrackPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -12,16 +14,12 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-[#f8f9fb] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
         <div className="text-center">
-          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="#9CA3AF" strokeWidth="1.75"/>
-              <path d="M12 8v4M12 16h.01" stroke="#9CA3AF" strokeWidth="1.75" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <h1 className="text-lg font-bold text-gray-900 mb-1">Order not found</h1>
-          <p className="text-sm text-gray-400">This tracking link may be invalid or expired.</p>
+          <p className="text-white/40 text-sm">Order not found</p>
+          <Link href="/track" className="text-white/20 text-xs mt-2 block hover:text-white/40 transition">
+            Search again
+          </Link>
         </div>
       </div>
     )
@@ -35,8 +33,7 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
 
   const overallStatus =
     done === total && total > 0 ? 'ready' :
-    inProgress > 0 || done > 0 ? 'in_progress' :
-    'received'
+    inProgress > 0 || done > 0 ? 'in_progress' : 'received'
 
   const steps = [
     {
@@ -80,94 +77,94 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
   ]
 
   return (
-    <div className="min-h-screen bg-[#f8f9fb]">
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-lg mx-auto px-5 py-4 flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M4 6h8M4 8h5M4 10h6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              <rect x="2" y="3" width="12" height="10" rx="2" stroke="white" strokeWidth="1.5"/>
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900 leading-tight">Order tracking</p>
-            <p className="text-xs text-gray-400 leading-tight">{order.shopify_order_number ?? 'Manual order'}</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#0a0a0f]">
+      <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
+        <Link href="/">
+          <Image
+            src="/atica-logo.png"
+            alt="Atica New York"
+            width={100}
+            height={38}
+            className="brightness-0 invert opacity-80"
+          />
+        </Link>
+        <Link href="/track" className="text-white/40 text-sm hover:text-white/70 transition">
+          Back
+        </Link>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-4">
+      <div className="max-w-lg mx-auto px-5 py-8 space-y-4">
 
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="bg-blue-600 px-6 py-5">
+        <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden">
+          <div className="px-6 py-5 border-b border-white/5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-blue-200 text-xs font-medium uppercase tracking-wide mb-1">Customer</p>
-                <h2 className="text-xl font-bold text-white">{order.customer_name}</h2>
-                <p className="text-blue-200 text-sm mt-0.5">{order.customer_phone}</p>
+                <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
+                  {order.shopify_order_number ?? 'Manual order'}
+                </p>
+                <h2 className="text-xl font-semibold text-white">{order.customer_name}</h2>
+                <p className="text-white/40 text-sm mt-0.5">{order.customer_phone}</p>
               </div>
               <div className="text-right">
-                <p className="text-blue-200 text-xs mb-1">Progress</p>
+                <p className="text-white/30 text-xs mb-1">Complete</p>
                 <p className="text-white text-3xl font-bold">{percent}%</p>
               </div>
             </div>
-            <div className="mt-4 h-1.5 bg-blue-500/50 rounded-full overflow-hidden">
+            <div className="mt-4 h-1 bg-white/10 rounded-full overflow-hidden">
               <div
-                className="h-1.5 bg-white rounded-full transition-all duration-700"
+                className="h-1 bg-white rounded-full transition-all duration-700"
                 style={{ width: percent + '%' }}
               />
             </div>
           </div>
-          <div className="px-6 py-3 bg-blue-50 border-b border-blue-100">
-            <p className="text-xs text-blue-600 font-medium">
+          <div className="px-6 py-3">
+            <p className="text-xs text-white/40">
               {done === total && total > 0
                 ? 'Your order is ready for pickup!'
                 : inProgress > 0 || done > 0
                 ? done + ' of ' + total + ' items complete — work in progress'
-                : 'Your order has been received and will begin soon'}
+                : 'Your order has been received'}
             </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <p className="text-sm font-semibold text-gray-900">Tracking updates</p>
+        <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/5">
+            <p className="text-sm font-semibold text-white">Tracking updates</p>
           </div>
-          <div className="px-5 py-4">
+          <div className="px-6 py-4">
             {steps.map((step, idx) => (
               <div key={step.key} className="flex gap-4">
                 <div className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                    step.active
-                      ? 'bg-blue-600'
-                      : step.done
-                      ? 'bg-blue-100'
-                      : 'bg-gray-100'
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                    step.active ? 'bg-white' :
+                    step.done ? 'bg-white/20' :
+                    'bg-white/5'
                   }`}>
                     {step.active ? (
-                      <div className="w-2.5 h-2.5 bg-white rounded-full" />
+                      <div className="w-2 h-2 bg-[#0a0a0f] rounded-full" />
                     ) : step.done ? (
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <path d="M2.5 7L5.5 10L11.5 4" stroke="#2563EB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     ) : (
-                      <div className="w-2.5 h-2.5 bg-gray-300 rounded-full" />
+                      <div className="w-2 h-2 bg-white/20 rounded-full" />
                     )}
                   </div>
                   {idx < steps.length - 1 && (
-                    <div className={`w-0.5 my-1 ${step.done ? 'bg-blue-200' : 'bg-gray-100'}`} style={{ minHeight: 28 }} />
+                    <div className={`w-px my-1 ${step.done ? 'bg-white/20' : 'bg-white/5'}`} style={{ minHeight: 28 }} />
                   )}
                 </div>
                 <div className="pb-5 flex-1">
                   <div className="flex justify-between items-start">
-                    <p className={`text-sm font-semibold ${step.done || step.active ? 'text-gray-900' : 'text-gray-400'}`}>
+                    <p className={`text-sm font-medium ${step.done || step.active ? 'text-white' : 'text-white/25'}`}>
                       {step.label}
                     </p>
                     {step.date && (
-                      <span className="text-xs text-gray-400 flex-shrink-0 ml-2">{step.date}</span>
+                      <span className="text-xs text-white/30 flex-shrink-0 ml-2">{step.date}</span>
                     )}
                   </div>
-                  <p className={`text-xs mt-0.5 ${step.done || step.active ? 'text-gray-500' : 'text-gray-300'}`}>
+                  <p className={`text-xs mt-0.5 ${step.done || step.active ? 'text-white/40' : 'text-white/15'}`}>
                     {step.sublabel}
                   </p>
                 </div>
@@ -176,11 +173,11 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <p className="text-sm font-semibold text-gray-900">Your items</p>
+        <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/5">
+            <p className="text-sm font-semibold text-white">Your items</p>
           </div>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-white/5">
             {items.map((item: {
               id: string
               alteration_type: string
@@ -193,26 +190,22 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
                 : item.job_assignments
               const tailor = assignment?.tailors?.name
               return (
-                <div key={item.id} className="px-5 py-4 flex items-center justify-between gap-3">
+                <div key={item.id} className="px-6 py-4 flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${item.status === 'done' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                    <p className={`text-sm font-medium ${item.status === 'done' ? 'line-through text-white/25' : 'text-white'}`}>
                       {item.alteration_type}
                     </p>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <p className="text-xs text-gray-400">
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-white/30">
                         Due {new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </p>
-                      {tailor && (
-                        <span className="text-xs text-blue-500">· {tailor}</span>
-                      )}
+                      {tailor && <p className="text-xs text-white/30">· {tailor}</p>}
                     </div>
                   </div>
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${
-                    item.status === 'done'
-                      ? 'bg-green-50 text-green-600 border border-green-100'
-                      : item.status === 'in_progress'
-                      ? 'bg-yellow-50 text-yellow-600 border border-yellow-100'
-                      : 'bg-gray-100 text-gray-400'
+                    item.status === 'done' ? 'bg-green-500/10 text-green-400' :
+                    item.status === 'in_progress' ? 'bg-yellow-500/10 text-yellow-400' :
+                    'bg-white/5 text-white/30'
                   }`}>
                     {item.status === 'done' ? 'Done' : item.status === 'in_progress' ? 'In progress' : 'Pending'}
                   </span>
@@ -222,7 +215,7 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
           </div>
         </div>
 
-        <p className="text-center text-xs text-gray-400 pb-4">
+        <p className="text-center text-xs text-white/15 pb-4">
           Updates automatically as your order progresses
         </p>
 

@@ -24,10 +24,10 @@ export default async function PrintPage({ params }: { params: Promise<{ orderId:
   const trackingUrl = process.env.NEXT_PUBLIC_APP_URL + '/track/' + order.tracking_token
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div>
       <div className="no-print bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-base font-semibold text-gray-900">Print tickets</h1>
+          <h1 className="text-base font-semibold text-gray-900">Print ticket</h1>
           <p className="text-sm text-gray-400">
             {order.customer_name} · {order.shopify_order_number ?? 'Manual'} · {items.length} items
           </p>
@@ -44,20 +44,6 @@ export default async function PrintPage({ params }: { params: Promise<{ orderId:
         items={items}
         trackingUrl={trackingUrl}
       />
-
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          body { background: white; margin: 0; padding: 0; }
-          .ticket {
-            border: 1px solid #e5e7eb !important;
-            box-shadow: none !important;
-            border-radius: 8px !important;
-            margin: 8px;
-            width: 300px !important;
-          }
-        }
-      `}</style>
     </div>
   )
 }

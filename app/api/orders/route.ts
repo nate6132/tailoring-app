@@ -35,13 +35,15 @@ export async function POST(req: NextRequest) {
   const supabase = createServerClient()
   const { customer_name, customer_phone, shopify_order_number, items } = await req.json()
 
+  const locationId = req.cookies.get('location_id')?.value || null
+
   if (!customer_name || !customer_phone || !items?.length) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .insert({ customer_name, customer_phone, shopify_order_number })
+    .insert({ customer_name, customer_phone, shopify_order_number, location_id: locationId })
     .select()
     .single()
 
