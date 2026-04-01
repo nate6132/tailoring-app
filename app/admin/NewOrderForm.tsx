@@ -1,7 +1,30 @@
 'use client'
 
 import { useState } from 'react'
-import { getDefaultDueDate } from '@/lib/dates'
+
+function getDefaultDueDate(): string {
+  const date = new Date()
+  const day = date.getDay()
+  const daysToAdd: Record<number, number> = {
+    0: 5,
+    1: 6,
+    2: 6,
+    3: 6,
+    4: 6,
+    5: 6,
+    6: 6,
+  }
+  date.setDate(date.getDate() + daysToAdd[day])
+  return date.toISOString().split('T')[0]
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 export default function NewOrderForm({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false)
@@ -11,9 +34,15 @@ export default function NewOrderForm({ onCreated }: { onCreated: () => void }) {
   const [itemInput, setItemInput] = useState('')
   const [items, setItems] = useState<string[]>([])
   const [rush, setRush] = useState(false)
-  const [dueDate, setDueDate] = useState(getDefaultDueDate())
+  const [dueDate, setDueDate] = useState(() => getDefaultDueDate())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  function handleOpen() {
+    setDueDate(getDefaultDueDate())
+    setRush(false)
+    setOpen(true)
+  }
 
   function addItem() {
     if (!itemInput.trim()) return
@@ -72,7 +101,7 @@ export default function NewOrderForm({ onCreated }: { onCreated: () => void }) {
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         className="w-full bg-gray-900 text-white px-4 py-3 rounded-2xl text-sm font-medium hover:bg-gray-800 transition"
       >
         + New Order
@@ -87,7 +116,9 @@ export default function NewOrderForm({ onCreated }: { onCreated: () => void }) {
 
         <div className="space-y-3 mb-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Customer name <span className="text-red-400">*</span></label>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              Customer name <span className="text-red-400">*</span>
+            </label>
             <input
               type="text"
               placeholder="Full name"
@@ -97,7 +128,9 @@ export default function NewOrderForm({ onCreated }: { onCreated: () => void }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone number <span className="text-red-400">*</span></label>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              Phone number <span className="text-red-400">*</span>
+            </label>
             <input
               type="tel"
               placeholder="10-digit phone"
@@ -107,7 +140,9 @@ export default function NewOrderForm({ onCreated }: { onCreated: () => void }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Order number <span className="text-red-400">*</span></label>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              Order number <span className="text-red-400">*</span>
+            </label>
             <input
               type="text"
               placeholder="e.g. #1042"
@@ -119,7 +154,9 @@ export default function NewOrderForm({ onCreated }: { onCreated: () => void }) {
         </div>
 
         <div className="mb-4">
-          <label className="block text-xs font-medium text-gray-500 mb-1.5">Alterations <span className="text-red-400">*</span></label>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">
+            Alterations <span className="text-red-400">*</span>
+          </label>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
@@ -140,7 +177,9 @@ export default function NewOrderForm({ onCreated }: { onCreated: () => void }) {
             {items.map((item, i) => (
               <div key={i} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl border border-gray-100">
                 <span className="text-sm text-gray-700">{item}</span>
-                <button onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 text-xs font-medium">Remove</button>
+                <button onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 text-xs font-medium">
+                  Remove
+                </button>
               </div>
             ))}
           </div>
@@ -154,7 +193,7 @@ export default function NewOrderForm({ onCreated }: { onCreated: () => void }) {
             </div>
             <button
               onClick={() => handleRushToggle(!rush)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${rush ? 'bg-red-500' : 'bg-gray-200'}`}
+              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${rush ? 'bg-red-500' : 'bg-gray-200'}`}
             >
               <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${rush ? 'translate-x-5' : 'translate-x-0'}`} />
             </button>
@@ -162,23 +201,31 @@ export default function NewOrderForm({ onCreated }: { onCreated: () => void }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Due date {rush && <span className="text-red-400">(custom)</span>}
+              Due date {rush ? <span className="text-red-400">(custom — pick any date)</span> : <span className="text-gray-400">(auto calculated)</span>}
             </label>
             <input
               type="date"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
               disabled={!rush}
-              className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 ${
-                rush ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-100 text-gray-400'
+              className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition ${
+                rush ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             />
-            {!rush && (
-              <p className="text-xs text-gray-400 mt-1">
-                Auto: {new Date(dueDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-              </p>
-            )}
+            <p className="text-xs text-gray-400 mt-1.5">
+              {rush
+                ? 'Custom: ' + formatDate(dueDate)
+                : 'Auto due: ' + formatDate(dueDate)
+              }
+            </p>
           </div>
+        </div>
+
+        <div className="mb-4 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
+          <p className="text-xs text-blue-600 font-medium">Order received today</p>
+          <p className="text-xs text-blue-500 mt-0.5">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+          </p>
         </div>
 
         {error && (
@@ -189,7 +236,7 @@ export default function NewOrderForm({ onCreated }: { onCreated: () => void }) {
 
         <div className="flex gap-2 justify-end">
           <button
-            onClick={() => { setOpen(false); setError(''); setRush(false); setDueDate(getDefaultDueDate()) }}
+            onClick={() => { setOpen(false); setError('') }}
             className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700"
           >
             Cancel

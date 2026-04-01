@@ -16,7 +16,8 @@ const PRINTNODE_API_KEY = process.env.PRINTNODE_API_KEY
 const PRINTNODE_PRINTER_ID = parseInt(process.env.PRINTNODE_PRINTER_ID)
 
 console.log('=================================')
-console.log('  Tailor Manager Print Server')
+console.log('  Atica Tailor Manager')
+console.log('  Print Server v2.0')
 console.log('=================================')
 
 if (!LOCATION_ID) {
@@ -92,21 +93,31 @@ function drawBarcode(doc, text, x, y, barWidth, barHeight) {
 
 async function generatePDF(order) {
   const items = order.order_items || []
-  const due = items[0]?.due_date
-    ? new Date(items[0].due_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  const isRush = order.rush === true
+
+  const dueDate = items[0]?.due_date
+    ? new Date(items[0].due_date).toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
     : 'N/A'
+
+  const receivedDate = new Date(order.created_at).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
 
   const barcodeValue = order.shopify_order_number || items[0]?.barcode_id || 'ORDER'
   const trackingUrl = APP_URL + '/track/' + order.tracking_token
-  const isRush = order.rush || false
 
   const labelWidth = 4 * 72
   const labelHeight = 6 * 72
 
-  const doc = new PDFDocument({
-    size: [labelWidth, labelHeight],
-    margin: 0,
-  })
+  const doc = new PDFDocument({ size: [labelWidth, labelHeight], margin: 0 })
 
   const tmpFile = path.join(os.tmpdir(), 'ticket-' + order.id + '.pdf')
   const stream = fs.createWriteStream(tmpFile)
@@ -116,18 +127,29 @@ async function generatePDF(order) {
   let y = margin
 
   if (isRush) {
-    doc.rect(margin, y, labelWidth - margin * 2, 26).fill('#000000')
-    doc.fillColor('#ffffff').fontSize(13).font('Helvetica-Bold')
-    doc.text('RUSH ORDER', margin, y + 6, { width: labelWidth - margin * 2, align: 'center' })
+    doc.rect(margin, y, labelWidth - margin * 2, 30).fill('#000000')
+    doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold')
+    doc.text('*** RUSH ORDER ***', margin, y + 8, {
+      width: labelWidth - margin * 2,
+      align: 'center'
+    })
     doc.fillColor('#000000')
-    y += 34
+    y += 38
   }
 
-  doc.fontSize(11).font('Helvetica').fillColor('#888888')
-  doc.text(order.shopify_order_number || 'Manual Order', margin, y)
-  y += 14
+  doc.fontSize(9).font('Helvetica').fillColor('#999999')
+  doc.text('ORDER', margin, y)
+  y += 12
 
-  doc.fillColor('#000000').fontSize(20).font('Helvetica-Bold')
+  doc.fontSize(13).font('Helvetica-Bold').fillColor('#000000')
+  doc.text(order.shopify_order_number || 'Manual Order', margin, y)
+  y += 18
+
+  doc.fontSize(9).font('Helvetica').fillColor('#999999')
+  doc.text('CUSTOMER', margin, y)
+  y += 12
+
+  doc.fontSize(20).font('Helvetica-Bold').fillColor('#000000')
   doc.text(order.customer_name, margin, y, { width: labelWidth - margin * 2 })
   y += 26
 
@@ -135,13 +157,12 @@ async function generatePDF(order) {
   doc.text(order.customer_phone, margin, y)
   y += 18
 
-  doc.moveTo(margin, y).lineTo(labelWidth - margin, y).lineWidth(0.5).dash(3, { space: 3 }).stroke('#cccccc')
-  doc.undash()
+  doc.moveTo(margin, y).lineTo(labelWidth - margin, y).lineWidth(0.5).dash(3, { space: 3 }).stroke('#cccccc').undash()
   y += 10
 
-  doc.fontSize(7).font('Helvetica').fillColor('#999999')
+  doc.fontSize(9).font('Helvetica').fillColor('#999999')
   doc.text('ALTERATIONS', margin, y)
-  y += 11
+  y += 12
 
   doc.fillColor('#000000').font('Helvetica-Bold').fontSize(11)
   items.forEach((item, idx) => {
@@ -149,44 +170,47 @@ async function generatePDF(order) {
     y += 16
   })
 
-  y += 4
-  doc.moveTo(margin, y).lineTo(labelWidth - margin, y).lineWidth(0.5).dash(3, { space: 3 }).stroke('#cccccc')
-  doc.undash()
+  y += 6
+  doc.moveTo(margin, y).lineTo(labelWidth - margin, y).lineWidth(0.5).dash(3, { space: 3 }).stroke('#cccccc').undash()
   y += 10
 
-  doc.fontSize(7).font('Helvetica').fillColor('#999999')
+  doc.fontSize(9).font('Helvetica').fillColor('#999999')
+  doc.text('RECEIVED', margin, y)
+  y += 12
+
+  doc.fontSize(11).font('Helvetica').fillColor('#000000')
+  doc.text(receivedDate, margin, y)
+  y += 18
+
+  doc.fontSize(9).font('Helvetica').fillColor('#999999')
   doc.text('DUE BY', margin, y)
-  y += 11
+  y += 12
 
   if (isRush) {
-    doc.fillColor('#000000').font('Helvetica-Bold').fontSize(15)
-    doc.text(due, margin, y)
-    doc.fontSize(10).font('Helvetica').fillColor('#000000')
-    doc.text('  RUSH', margin + doc.widthOfString(due, { fontSize: 15 }) + 4, y + 2)
+    doc.fontSize(14).font('Helvetica-Bold').fillColor('#000000')
+    doc.text(dueDate + '  [RUSH]', margin, y)
   } else {
-    doc.fillColor('#000000').font('Helvetica-Bold').fontSize(13)
-    doc.text(due, margin, y)
+    doc.fontSize(13).font('Helvetica-Bold').fillColor('#000000')
+    doc.text(dueDate, margin, y)
   }
   y += 22
 
-  doc.moveTo(margin, y).lineTo(labelWidth - margin, y).lineWidth(0.5).dash(3, { space: 3 }).stroke('#cccccc')
-  doc.undash()
+  doc.moveTo(margin, y).lineTo(labelWidth - margin, y).lineWidth(0.5).dash(3, { space: 3 }).stroke('#cccccc').undash()
   y += 12
 
-  doc.fontSize(7).font('Helvetica').fillColor('#999999')
+  doc.fontSize(9).font('Helvetica').fillColor('#999999')
   doc.text('BARCODE', margin, y)
   y += 10
 
   drawBarcode(doc, barcodeValue, margin, y, 1.8, 52)
   y += 76
 
-  doc.moveTo(margin, y).lineTo(labelWidth - margin, y).lineWidth(0.5).dash(3, { space: 3 }).stroke('#cccccc')
-  doc.undash()
+  doc.moveTo(margin, y).lineTo(labelWidth - margin, y).lineWidth(0.5).dash(3, { space: 3 }).stroke('#cccccc').undash()
   y += 10
 
-  doc.fontSize(7).font('Helvetica').fillColor('#999999')
-  doc.text('SCAN TO TRACK YOUR ORDER', margin, y)
-  y += 11
+  doc.fontSize(9).font('Helvetica').fillColor('#999999')
+  doc.text('SCAN TO TRACK', margin, y)
+  y += 12
 
   doc.fontSize(8).fillColor('#555555')
   doc.text(trackingUrl, margin, y, { width: labelWidth - margin * 2 })
@@ -199,15 +223,15 @@ async function generatePDF(order) {
   })
 }
 
-async function sendToPrintNode(pdfFile, orderNumber) {
+async function sendToPrintNode(pdfFile, orderNumber, isRush) {
   const pdfBase64 = fs.readFileSync(pdfFile).toString('base64')
 
   const payload = {
     printerId: PRINTNODE_PRINTER_ID,
-    title: 'Tailor Ticket - ' + (orderNumber || 'Order'),
+    title: (isRush ? '[RUSH] ' : '') + 'Atica Ticket - ' + (orderNumber || 'Order'),
     contentType: 'pdf_base64',
     content: pdfBase64,
-    source: 'Tailor Manager',
+    source: 'Atica Tailor Manager',
   }
 
   const credentials = Buffer.from(PRINTNODE_API_KEY + ':').toString('base64')
@@ -250,12 +274,19 @@ async function printOrder(orderId) {
       return
     }
 
-    console.log('Generating PDF for:', order.customer_name, order.rush ? '⚡ RUSH' : '')
-    const pdfFile = await generatePDF(order)
-    console.log('PDF generated, sending to PrintNode...')
+    const isRush = order.rush === true
+    console.log('Customer:', order.customer_name)
+    console.log('Order #:', order.shopify_order_number)
+    console.log('Rush:', isRush ? 'YES' : 'No')
+    console.log('Items:', order.order_items?.length)
 
-    const result = await sendToPrintNode(pdfFile, order.shopify_order_number)
-    console.log('Print job sent! PrintNode job ID:', result)
+    console.log('Generating PDF...')
+    const pdfFile = await generatePDF(order)
+    console.log('PDF generated:', pdfFile)
+
+    console.log('Sending to PrintNode...')
+    const result = await sendToPrintNode(pdfFile, order.shopify_order_number, isRush)
+    console.log('Print job sent! Job ID:', result)
 
     setTimeout(() => {
       try { fs.unlinkSync(pdfFile) } catch (e) {}
@@ -293,7 +324,7 @@ async function start() {
         table: 'orders',
       },
       (payload) => {
-        console.log('New order detected!')
+        console.log('\nNew order detected!')
         printOrder(payload.new.id)
       }
     )

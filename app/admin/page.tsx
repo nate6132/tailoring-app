@@ -100,38 +100,38 @@ export default function AdminPage() {
 
   return (
     <div className="px-4 md:px-8 py-6 max-w-4xl mx-auto">
-      <div className="mb-6">
+      <div className="mb-5">
         <h1 className="text-xl font-bold text-gray-900">Orders</h1>
         <p className="text-sm text-gray-400 mt-0.5">{orders.length} total</p>
       </div>
 
-      <div className="flex gap-2 flex-wrap mb-5">
-        <div className="flex-1 min-w-48">
+      <div className="space-y-2 mb-5">
+        <input
+          type="text"
+          placeholder="Search name, order #, phone..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 shadow-sm"
+        />
+        <div className="flex gap-2">
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="flex-1 bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 shadow-sm"
+          >
+            <option value="all">All statuses</option>
+            <option value="received">Received</option>
+            <option value="in_progress">In progress</option>
+            <option value="ready">Ready</option>
+            <option value="picked_up">Picked up</option>
+          </select>
           <input
-            type="text"
-            placeholder="Search name, order #, phone..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+            type="date"
+            value={dateFilter}
+            onChange={e => setDateFilter(e.target.value)}
+            className="flex-1 bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 shadow-sm"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-        >
-          <option value="all">All statuses</option>
-          <option value="received">Received</option>
-          <option value="in_progress">In progress</option>
-          <option value="ready">Ready</option>
-          <option value="picked_up">Picked up</option>
-        </select>
-        <input
-          type="date"
-          value={dateFilter}
-          onChange={e => setDateFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-        />
         <NewOrderForm onCreated={loadOrders} />
       </div>
 
@@ -145,46 +145,55 @@ export default function AdminPage() {
             const { done, total } = getProgress(order)
             const expanded = expandedOrders.has(order.id)
             const percent = total ? Math.round((done / total) * 100) : 0
+            const dueDate = order.order_items?.[0]?.due_date
             return (
               <div key={order.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="px-5 py-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
                         <span className="font-semibold text-gray-900 text-sm">{order.customer_name}</span>
-                        <span className="text-gray-400 text-xs">{order.shopify_order_number ?? 'Manual'}</span>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[order.status]}`}>
                           {order.status.replace('_', ' ')}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">{order.customer_phone}</p>
-                      <p className="text-xs text-gray-300 mt-0.5">
-                        {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        {' · '}{done}/{total} done
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
-                      <button onClick={() => setSmsOrder(order)} className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-xl hover:bg-blue-700 transition">SMS</button>
-                      <a href={'/print/' + order.id} target="_blank" rel="noreferrer" className="bg-gray-100 text-gray-600 text-xs px-3 py-1.5 rounded-xl hover:bg-gray-200 transition">Print</a>
-                      <a href={'/track/' + order.tracking_token} target="_blank" rel="noreferrer" className="bg-gray-100 text-gray-600 text-xs px-3 py-1.5 rounded-xl hover:bg-gray-200 transition">Track</a>
-                      <button onClick={() => setEditOrder(order)} className="bg-gray-100 text-gray-600 text-xs px-3 py-1.5 rounded-xl hover:bg-gray-200 transition">Edit</button>
-                      <button onClick={() => toggleExpand(order.id)} className="bg-gray-100 text-gray-600 text-xs px-3 py-1.5 rounded-xl hover:bg-gray-200 transition">
-                        {expanded ? 'Hide' : 'Items'}
-                      </button>
-                      <button onClick={() => setDeleteConfirm(order.id)} className="bg-red-50 text-red-400 text-xs px-3 py-1.5 rounded-xl hover:bg-red-100 transition">Delete</button>
+                      <p className="text-xs text-gray-400">{order.shopify_order_number ?? 'No order #'}</p>
+                      <p className="text-xs text-gray-400">{order.customer_phone}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <p className="text-xs text-gray-300">
+                          In: {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                        {dueDate && (
+                          <p className="text-xs text-gray-300">
+                            Due: {new Date(dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-300">{done}/{total} done</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-3 h-1 bg-gray-100 rounded-full overflow-hidden">
+
+                  <div className="h-1 bg-gray-100 rounded-full overflow-hidden mb-3">
                     <div className="h-1 bg-gray-800 rounded-full transition-all duration-500" style={{ width: percent + '%' }} />
                   </div>
-                  <p className="text-xs text-gray-300 mt-1">{percent}%</p>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    <button onClick={() => setSmsOrder(order)} className="bg-gray-900 text-white text-xs px-3 py-1.5 rounded-xl hover:bg-gray-800 transition">SMS</button>
+                    <a href={'/print/' + order.id} target="_blank" rel="noreferrer" className="bg-gray-100 text-gray-600 text-xs px-3 py-1.5 rounded-xl hover:bg-gray-200 transition">Print</a>
+                    <a href={'/track/' + order.tracking_token} target="_blank" rel="noreferrer" className="bg-gray-100 text-gray-600 text-xs px-3 py-1.5 rounded-xl hover:bg-gray-200 transition">Track</a>
+                    <button onClick={() => setEditOrder(order)} className="bg-gray-100 text-gray-600 text-xs px-3 py-1.5 rounded-xl hover:bg-gray-200 transition">Edit</button>
+                    <button onClick={() => toggleExpand(order.id)} className="bg-gray-100 text-gray-600 text-xs px-3 py-1.5 rounded-xl hover:bg-gray-200 transition">
+                      {expanded ? 'Hide' : 'Items'}
+                    </button>
+                    <button onClick={() => setDeleteConfirm(order.id)} className="bg-red-50 text-red-400 text-xs px-3 py-1.5 rounded-xl hover:bg-red-100 transition">Delete</button>
+                  </div>
                 </div>
 
                 {expanded && (
                   <div className="border-t border-gray-100">
                     <div className="px-5 py-2.5 flex justify-between items-center bg-gray-50/50">
                       <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Items</p>
-                      <button onClick={() => setAddItemOrder(order)} className="text-xs text-blue-600 hover:text-blue-700 font-medium">+ Add item</button>
+                      <button onClick={() => setAddItemOrder(order)} className="text-xs text-gray-900 font-medium hover:text-gray-700">+ Add item</button>
                     </div>
                     <div className="divide-y divide-gray-100">
                       {(order.order_items || []).map(item => {
@@ -229,7 +238,7 @@ export default function AdminPage() {
               </svg>
             </div>
             <h2 className="text-base font-bold text-gray-900 mb-1">Delete order?</h2>
-            <p className="text-sm text-gray-400 mb-6">This cannot be undone. All items and assignments will be deleted.</p>
+            <p className="text-sm text-gray-400 mb-6">This cannot be undone.</p>
             <div className="flex gap-2">
               <button onClick={() => setDeleteConfirm(null)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition">
                 Cancel
